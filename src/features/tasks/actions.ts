@@ -1,12 +1,14 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+import { getServerSession } from "@/lib/auth-server";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 import { db } from "@/server/db";
 import { tasks } from "@/server/db/schema";
 
-// 统一定义 action 返回结构
 export type ActionResult = {
   success: boolean;
   message: string;
@@ -16,122 +18,179 @@ export async function createTask(
   _prevState: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
-  // 从表单中取出 title / description
-  const title = formData.get("title")?.toString().trim();
-  const description = formData.get("description")?.toString().trim();
+  const [session, locale] = await Promise.all([getServerSession(), getLocale()]);
+  const t = getMessages(locale).tasks;
 
-  // 服务端兜底校验
-  if (!title) {
+  if (!session?.user) {
     return {
       success: false,
-      message: "任务标题不能为空",
+      message: t.authRequiredCreate,
     };
   }
 
-  // 插入数据库
+  const title = formData.get("title")?.toString().trim();
+  const description = formData.get("description")?.toString().trim();
+
+  if (!title) {
+    return {
+      success: false,
+      message: t.taskTitleMissing,
+    };
+  }
+
   await db.insert(tasks).values({
+    userId: session.user.id,
     title,
     description: description || null,
   });
 
-  // 首页数据变了，通知 Next.js 重新获取
-  revalidatePath("/");
+  revalidatePath("/dashboard");
 
   return {
     success: true,
-    message: "任务创建成功",
+    message: t.taskCreated,
   };
 }
 
 export async function updateTask(formData: FormData): Promise<ActionResult> {
-  // 编辑时需要知道“改哪一条任务”
-  const id = formData.get("id")?.toString();
+  const [session, locale] = await Promise.all([getServerSession(), getLocale()]);
+  const t = getMessages(locale).tasks;
 
-  // 取出编辑后的标题和描述
+  if (!session?.user) {
+    return {
+      success: false,
+      message: t.authRequiredUpdate,
+    };
+  }
+
+  const id = formData.get("id")?.toString();
   const title = formData.get("title")?.toString().trim();
   const description = formData.get("description")?.toString().trim();
 
   if (!id) {
     return {
       success: false,
-      message: "任务 id 不存在",
+      message: t.taskIdMissing,
     };
   }
 
-  // 编辑时标题同样不能为空
   if (!title) {
     return {
       success: false,
-      message: "任务标题不能为空",
+      message: t.taskTitleMissing,
     };
   }
 
-  // 更新数据库中的任务内容
-  await db
+  const result = await db
     .update(tasks)
     .set({
       title,
       description: description || null,
       updatedAt: new Date(),
     })
-    .where(eq(tasks.id, id));
+    .where(and(eq(tasks.id, id), eq(tasks.userId, session.user.id)))
+    .returning({ id: tasks.id });
 
-  revalidatePath("/");
+  if (result.length === 0) {
+    return {
+      success: false,
+      message: t.taskNotFound,
+    };
+  }
+
+  revalidatePath("/dashboard");
 
   return {
     success: true,
-    message: "任务更新成功",
+    message: t.taskUpdated,
   };
 }
 
 export async function toggleTaskCompleted(
   formData: FormData,
 ): Promise<ActionResult> {
+  const [session, locale] = await Promise.all([getServerSession(), getLocale()]);
+  const t = getMessages(locale).tasks;
+
+  if (!session?.user) {
+    return {
+      success: false,
+      message: t.authRequiredToggle,
+    };
+  }
+
   const id = formData.get("id")?.toString();
   const completedValue = formData.get("completed")?.toString();
 
   if (!id) {
     return {
       success: false,
-      message: "任务 id 不存在",
+      message: t.taskIdMissing,
     };
   }
 
-  // 当前值如果是 true，下一次就设为 false；反之设为 true
   const nextCompleted = completedValue !== "true";
 
-  await db
+  const result = await db
     .update(tasks)
     .set({
       completed: nextCompleted,
       updatedAt: new Date(),
     })
-    .where(eq(tasks.id, id));
+    .where(and(eq(tasks.id, id), eq(tasks.userId, session.user.id)))
+    .returning({ id: tasks.id });
 
-  revalidatePath("/");
+  if (result.length === 0) {
+    return {
+      success: false,
+      message: t.taskNotFound,
+    };
+  }
+
+  revalidatePath("/dashboard");
 
   return {
     success: true,
-    message: nextCompleted ? "任务已标记为完成" : "任务已恢复为未完成",
+    message: nextCompleted ? t.taskCompleted : t.taskReopened,
   };
 }
 
 export async function deleteTask(formData: FormData): Promise<ActionResult> {
+  const [session, locale] = await Promise.all([getServerSession(), getLocale()]);
+  const t = getMessages(locale).tasks;
+
+  if (!session?.user) {
+    return {
+      success: false,
+      message: t.authRequiredDelete,
+    };
+  }
+
   const id = formData.get("id")?.toString();
 
   if (!id) {
     return {
       success: false,
-      message: "任务 id 不存在",
+      message: t.taskIdMissing,
     };
   }
 
-  await db.delete(tasks).where(eq(tasks.id, id));
+  const result = await db
+    .delete(tasks)
+    .where(and(eq(tasks.id, id), eq(tasks.userId, session.user.id)))
+    .returning({ id: tasks.id });
 
-  revalidatePath("/");
+  if (result.length === 0) {
+    return {
+      success: false,
+      message: t.taskNotFound,
+    };
+  }
+
+  revalidatePath("/dashboard");
 
   return {
     success: true,
-    message: "任务已删除",
+    message: t.taskDeleted,
   };
 }

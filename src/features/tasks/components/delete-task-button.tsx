@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 
+import { useAppLocale } from "@/components/providers/app-providers";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -16,42 +17,36 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { deleteTask } from "@/features/tasks/actions";
+import { getMessages } from "@/lib/i18n";
 
 type DeleteTaskButtonProps = {
   id: string;
 };
 
 export function DeleteTaskButton({ id }: DeleteTaskButtonProps) {
-  // 用来处理异步删除中的按钮状态
   const [isPending, startTransition] = useTransition();
+  const { locale } = useAppLocale();
+  const t = getMessages(locale).tasks;
 
   return (
     <AlertDialog>
-      {/* 这个按钮只是“打开确认弹窗”，并不会立刻删除 */}
       <AlertDialogTrigger asChild>
         <Button variant="destructive" size="sm">
-          删除
+          {t.delete}
         </Button>
       </AlertDialogTrigger>
 
-      <AlertDialogContent>
+      <AlertDialogContent className="border-border/70 bg-popover/95">
         <AlertDialogHeader>
-          <AlertDialogTitle>确认删除这条任务吗？</AlertDialogTitle>
-          <AlertDialogDescription>
-            删除后将无法恢复。请确认你真的要删除这条任务。
-          </AlertDialogDescription>
+          <AlertDialogTitle>{t.deleteTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{t.deleteDescription}</AlertDialogDescription>
         </AlertDialogHeader>
 
         <AlertDialogFooter>
-          {/* 取消按钮：关闭弹窗，不执行删除 */}
-          <AlertDialogCancel disabled={isPending}>取消</AlertDialogCancel>
-
-          {/* 这里不用 form 了，直接在确认按钮点击时调用删除 action */}
+          <AlertDialogCancel disabled={isPending}>{t.cancel}</AlertDialogCancel>
           <AlertDialogAction
             disabled={isPending}
             onClick={(event) => {
-              // 阻止 AlertDialogAction 默认立即关闭后不受控提交的行为，
-              // 我们自己在这里处理异步删除逻辑。
               event.preventDefault();
 
               const formData = new FormData();
@@ -62,13 +57,14 @@ export function DeleteTaskButton({ id }: DeleteTaskButtonProps) {
 
                 if (result.success) {
                   toast.success(result.message);
-                } else {
-                  toast.error(result.message);
+                  return;
                 }
+
+                toast.error(result.message);
               });
             }}
           >
-            {isPending ? "删除中..." : "确认删除"}
+            {isPending ? t.deleting : t.deleteConfirm}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

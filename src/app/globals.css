@@ -128,3 +128,109 @@
     @apply font-sans;
   }
 }
+
+@layer utilities {
+  .grid-surface {
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, var(--border) 42%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--border) 42%, transparent) 1px, transparent 1px);
+    background-size: 38px 38px;
+    background-position: center;
+  }
+
+  .glass-panel {
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--card) 84%, transparent), color-mix(in oklab, var(--card) 68%, transparent));
+    border: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
+    box-shadow:
+      0 30px 80px color-mix(in oklab, var(--foreground) 7%, transparent),
+      inset 0 1px 0 color-mix(in oklab, white 40%, transparent);
+    backdrop-filter: blur(24px);
+  }
+
+  .soft-glow {
+    position: relative;
+  }
+
+  .soft-glow::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, white 28%, transparent),
+      transparent 34%,
+      transparent 66%,
+      color-mix(in oklab, var(--primary) 18%, transparent)
+    );
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .card-3d-shell {
+    perspective: 1600px;
+    transform-style: preserve-3d;
+  }
+
+  .card-3d-inner {
+    position: relative;
+    transform-style: preserve-3d;
+    will-change: transform, box-shadow;
+    transition: box-shadow 220ms ease;
+  }
+
+  .card-3d-static {
+    transform: translateZ(0);
+  }
+
+  .card-3d-glare {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        circle at var(--glare-x, 50%) var(--glare-y, 50%),
+        rgba(255,255,255,var(--glare-opacity,0.28)),
+        transparent 34%
+      );
+    mix-blend-mode: screen;
+    z-index: 1;
+  }
+
+  .card-3d-layer-1,
+  .card-3d-layer-2,
+  .card-3d-layer-3 {
+    position: relative;
+    transform-style: preserve-3d;
+    z-index: 2;
+  }
+
+  .card-3d-layer-1 {
+    transform: translateZ(18px);
+  }
+
+  .card-3d-layer-2 {
+    transform: translateZ(34px);
+  }
+
+  .card-3d-layer-3 {
+    transform: translateZ(52px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-3d-shell {
+    perspective: none;
+  }
+
+  .card-3d-inner,
+  .card-3d-layer-1,
+  .card-3d-layer-2,
+  .card-3d-layer-3 {
+    transform: none !important;
+    transition: none !important;
+    will-change: auto;
+  }
+}

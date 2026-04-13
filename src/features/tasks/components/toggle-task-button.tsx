@@ -3,8 +3,10 @@
 import { useTransition } from "react";
 import { toast } from "sonner";
 
+import { useAppLocale } from "@/components/providers/app-providers";
 import { Button } from "@/components/ui/button";
 import { toggleTaskCompleted } from "@/features/tasks/actions";
+import { getMessages } from "@/lib/i18n";
 
 type ToggleTaskButtonProps = {
   id: string;
@@ -12,8 +14,9 @@ type ToggleTaskButtonProps = {
 };
 
 export function ToggleTaskButton({ id, completed }: ToggleTaskButtonProps) {
-  // useTransition 适合处理这类“点击按钮 -> 调 action -> 给反馈”的场景
   const [isPending, startTransition] = useTransition();
+  const { locale } = useAppLocale();
+  const t = getMessages(locale).tasks;
 
   return (
     <form
@@ -23,18 +26,18 @@ export function ToggleTaskButton({ id, completed }: ToggleTaskButtonProps) {
 
           if (result.success) {
             toast.success(result.message);
-          } else {
-            toast.error(result.message);
+            return;
           }
+
+          toast.error(result.message);
         });
       }}
     >
-      {/* 用 hidden input 把当前任务信息带给服务端 */}
       <input type="hidden" name="id" value={id} />
       <input type="hidden" name="completed" value={String(completed)} />
 
       <Button type="submit" variant="outline" size="sm" disabled={isPending}>
-        {isPending ? "处理中..." : completed ? "设为未完成" : "标记完成"}
+        {isPending ? t.togglePending : completed ? t.markPending : t.markComplete}
       </Button>
     </form>
   );

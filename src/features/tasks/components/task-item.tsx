@@ -1,18 +1,10 @@
-//它只负责：
-
-// “渲染一条任务卡片”
-
-// 也就是说，以后你看到一条任务的标题、描述、时间、状态、按钮，全都在这里维护。
-
-// 这样有两个好处：
-
-// 以后想改任务卡片样式，不用去翻很长的 page.tsx
-// 后面如果要加“优先级”“标签”“负责人”，改这里就行
+"use client";
 
 import { DeleteTaskButton } from "@/features/tasks/components/delete-task-button";
 import { EditTaskDialog } from "@/features/tasks/components/edit-task-dialog";
 import { ToggleTaskButton } from "@/features/tasks/components/toggle-task-button";
-import { formatDate } from "@/lib/utils";
+import { useAppLocale } from "@/components/providers/app-providers";
+import { formatLocaleDate, getMessages } from "@/lib/i18n";
 
 type TaskItemProps = {
   task: {
@@ -25,21 +17,19 @@ type TaskItemProps = {
 };
 
 export function TaskItem({ task }: TaskItemProps) {
+  const { locale } = useAppLocale();
+  const t = getMessages(locale).tasks;
+
   return (
-    <div className="rounded-lg border bg-white p-4 shadow-sm">
+    <div className="rounded-2xl border border-border/70 bg-card/70 p-4 shadow-sm backdrop-blur">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          {/* 任务标题：最重要的信息，所以字号和颜色都更突出 */}
-          <p className="text-base font-medium text-slate-900">{task.title}</p>
-
-          {/* 描述是辅助信息，颜色比标题更淡 */}
-          <p className="text-sm text-slate-500">
-            {task.description || "暂无描述"}
+          <p className="text-base font-medium text-card-foreground">{task.title}</p>
+          <p className="text-sm text-muted-foreground">
+            {task.description || t.noDescription}
           </p>
-
-          {/* 时间信息层级最低，所以用更小的字号和更浅的颜色 */}
-          <p className="text-xs text-slate-400">
-            创建于 {formatDate(task.createdAt)}
+          <p className="text-xs text-muted-foreground/80">
+            {t.createdAt}: {formatLocaleDate(locale, task.createdAt)}
           </p>
         </div>
 
@@ -47,15 +37,13 @@ export function TaskItem({ task }: TaskItemProps) {
           <span
             className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${
               task.completed
-                ? "bg-green-100 text-green-700"
-                : "bg-slate-100 text-slate-700"
+                ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                : "bg-muted text-muted-foreground"
             }`}
           >
-            {task.completed ? "已完成" : "未完成"}
+            {task.completed ? t.completed : t.pending}
           </span>
 
-          {/* 操作按钮组：
-             编辑 / 切换状态 / 删除 都放在这里，方便后面继续扩展 */}
           <div className="flex flex-wrap justify-end gap-2">
             <EditTaskDialog
               id={task.id}

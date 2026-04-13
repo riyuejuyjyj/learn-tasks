@@ -6,6 +6,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { getMessages } from "@/lib/i18n";
+import { getLocale } from "@/lib/i18n/server";
 
 type TaskPaginationProps = {
   currentPage: number;
@@ -16,28 +18,27 @@ type TaskPaginationProps = {
 function buildPageHref(page: number, query?: string) {
   const params = new URLSearchParams();
 
-  // 保留搜索词，避免翻页后搜索条件丢失
   if (query) {
     params.set("q", query);
   }
 
-  // 只有页码大于 1 时才写进 URL，
-  // 这样第一页保持更干净的 URL
   if (page > 1) {
     params.set("page", String(page));
   }
 
   const search = params.toString();
 
-  return search ? `/?${search}` : "/";
+  return search ? `/dashboard?${search}` : "/dashboard";
 }
 
-export function TaskPagination({
+export async function TaskPagination({
   currentPage,
   totalPages,
   query,
 }: TaskPaginationProps) {
-  // 只有 1 页时，不显示分页
+  const locale = await getLocale();
+  const t = getMessages(locale).tasks;
+
   if (totalPages <= 1) {
     return null;
   }
@@ -46,33 +47,28 @@ export function TaskPagination({
   const nextHref = buildPageHref(currentPage + 1, query);
 
   return (
-    <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-      {/* 左边显示当前页信息 */}
-      <p className="text-sm text-slate-500">
-        第 {currentPage} 页，共 {totalPages} 页
+    <div className="flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">
+        {t.pageLabel({ currentPage, totalPages })}
       </p>
 
-      {/* 右边用 shadcn/ui 的 Pagination 组件来渲染 UI */}
       <Pagination className="mx-0 w-auto justify-start sm:justify-end">
         <PaginationContent>
           <PaginationItem>
             {currentPage > 1 ? (
-              <PaginationPrevious href={previousHref} text="上一页" />
+              <PaginationPrevious href={previousHref} text={t.previousPage} />
             ) : (
-              // 当前已经是第一页时，用“不可点击”的样式占位，
-              // 避免布局跳动。
               <PaginationLink
                 href="#"
                 size="default"
                 className="pointer-events-none opacity-50"
               >
-                上一页
+                {t.previousPage}
               </PaginationLink>
             )}
           </PaginationItem>
 
           <PaginationItem>
-            {/* 当前页码高亮显示 */}
             <PaginationLink href={buildPageHref(currentPage, query)} isActive>
               {currentPage}
             </PaginationLink>
@@ -80,15 +76,14 @@ export function TaskPagination({
 
           <PaginationItem>
             {currentPage < totalPages ? (
-              <PaginationNext href={nextHref} text="下一页" />
+              <PaginationNext href={nextHref} text={t.nextPage} />
             ) : (
-              // 当前已经是最后一页时，同样显示禁用态占位
               <PaginationLink
                 href="#"
                 size="default"
                 className="pointer-events-none opacity-50"
               >
-                下一页
+                {t.nextPage}
               </PaginationLink>
             )}
           </PaginationItem>
